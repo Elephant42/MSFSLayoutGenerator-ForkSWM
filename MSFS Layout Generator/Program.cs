@@ -36,7 +36,8 @@ namespace MSFSLayoutGenerator
                             content.Size = new FileInfo(file).Length;
                             content.Date = new FileInfo(file).LastWriteTimeUtc.ToFileTimeUtc();
 
-                            if (!relativePath.StartsWith("_CVT_", StringComparison.OrdinalIgnoreCase) && !string.Equals(relativePath, "business.json") && !string.Equals(relativePath, "layout.json") && !string.Equals(relativePath, "manifest.json"))
+                            //if (!relativePath.StartsWith("_CVT_", StringComparison.OrdinalIgnoreCase) && !string.Equals(relativePath, "business.json") && !string.Equals(relativePath, "layout.json") && !string.Equals(relativePath, "manifest.json"))
+                            if (isok(relativePath))
                             {
                                 layout.Content.Add(content);
                             }
@@ -69,5 +70,29 @@ namespace MSFSLayoutGenerator
                 }
             }
         }
+
+        static bool isok(string relativePath)
+        {
+            if (relativePath.StartsWith("_CVT_", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (string.Equals(relativePath, "business.json"))
+                return false;
+
+            if (string.Equals(relativePath, "layout.json"))
+                return false;
+
+            if (string.Equals(relativePath, "manifest.json"))
+                return false;
+
+            if (string.Equals(relativePath, "holdingdata.xml"))
+                return false;
+
+            if (string.Equals(relativePath.ToLower(), "readme.md"))
+                return false;
+
+            return true;
+        }
+
     }
 }
