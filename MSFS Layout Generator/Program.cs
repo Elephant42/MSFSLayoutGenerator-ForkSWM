@@ -25,6 +25,8 @@ namespace MSFSLayoutGenerator
                     string layoutPath = Path.GetFullPath(path);
                     string json;
 
+                    cleanDirs(layoutPath);
+
                     if (string.Equals(Path.GetFileName(layoutPath), "layout.json", StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (string file in Directory.GetFiles(Path.GetDirectoryName(layoutPath), "*.*", SearchOption.AllDirectories))
@@ -66,6 +68,47 @@ namespace MSFSLayoutGenerator
                     else
                     {
                         Utilities.Log("The file \"" + layoutPath + "\" is not named layout.json and will not be updated.");
+                    }
+                }
+            }
+        }
+
+        static void cleanDirs(string layoutPath)
+        {
+            FileInfo fi = new FileInfo(layoutPath);
+            DirectoryInfo di = fi.Directory;
+
+            foreach (DirectoryInfo tdi in di.GetDirectories())
+            {
+                if (tdi.Name.ToLower() == "scenery")
+                {
+                    foreach (DirectoryInfo tdi2 in tdi.GetDirectories())
+                    {
+                        if (tdi2.Name.ToLower() == "global")
+                        {
+                            string dest = Path.Combine(tdi.FullName, di.Name + "_global");
+                            if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
+                            Directory.Move(tdi2.FullName, dest);
+                        }
+                        if (tdi2.Name.ToLower() == "world")
+                        {
+                            string dest = Path.Combine(tdi.FullName, di.Name + "_world");
+                            if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
+                            Directory.Move(tdi2.FullName, dest);
+                        }
+                    }
+                }
+
+                if (tdi.Name.ToLower() == "materiallibs")
+                {
+                    foreach (DirectoryInfo tdi2 in tdi.GetDirectories())
+                    {
+                        if (tdi2.Name.ToLower() == "mymaterials")
+                        {
+                            string dest = Path.Combine(tdi.FullName, di.Name);
+                            if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
+                            Directory.Move(tdi2.FullName, dest);
+                        }
                     }
                 }
             }
