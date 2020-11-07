@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+//using System.Collections.Generic;
+//using System.Linq;
+//using System.Text;
+//using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace MSFSLayoutGenerator
 {
@@ -39,6 +40,21 @@ namespace MSFSLayoutGenerator
             Console.WriteLine("Press any key to exit...");
             Console.ReadKey();
             Environment.Exit(0);
+        }
+
+        public static void errorBox(string errMsg)
+        {
+            MessageBox.Show(errMsg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        public static void alertBox(string errMsg)
+        {
+            MessageBox.Show(errMsg, "Alert", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+        }
+
+        public static void infoBox(string errMsg)
+        {
+            MessageBox.Show(errMsg, "Message", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

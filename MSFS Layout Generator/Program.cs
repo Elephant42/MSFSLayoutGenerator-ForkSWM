@@ -1,74 +1,127 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Text.Json;
 using System.Text.Unicode;
+using System.Collections.Generic;
 
 namespace MSFSLayoutGenerator
 {
     class Program
     {
-        static void Main(string[] layoutPaths)
+        static void Main(string[] paths)
         {
-            if(layoutPaths.Count() == 0)
+            if(paths.Count() == 0)
             {
-                Utilities.Log(new  string[] { "No layout.json paths specified.", "Usage: MSFSLayoutGenerator.exe <layout.json> ..." });
+                Utilities.alertBox("No paths specified." + Environment.NewLine + "Usage: MSFSLayoutGenerator.exe <layout.json>|<dir_path> ..." );
             }
             else
             {
-                foreach (string path in layoutPaths)
+                foreach (string path in paths)
                 {
-                    Layout layout = new Layout();
-                    string layoutPath = Path.GetFullPath(path);
-                    string json;
-
-                    cleanDirs(layoutPath);
-
-                    if (string.Equals(Path.GetFileName(layoutPath), "layout.json", StringComparison.OrdinalIgnoreCase))
+                    if (File.Exists(path))
                     {
-                        foreach (string file in Directory.GetFiles(Path.GetDirectoryName(layoutPath), "*.*", SearchOption.AllDirectories))
+                        FileInfo fi = new FileInfo(path);
+                        if (string.Equals(fi.Name, "layout.json", StringComparison.OrdinalIgnoreCase))
                         {
-                            string relativePath = Utilities.GetRelativePath(file, Path.GetDirectoryName(layoutPath));
-
-                            Content content = new Content();
-                            content.Path = relativePath;
-                            content.Size = new FileInfo(file).Length;
-                            content.Date = new FileInfo(file).LastWriteTimeUtc.ToFileTimeUtc();
-
-                            //if (!relativePath.StartsWith("_CVT_", StringComparison.OrdinalIgnoreCase) && !string.Equals(relativePath, "business.json") && !string.Equals(relativePath, "layout.json") && !string.Equals(relativePath, "manifest.json"))
-                            if (isok(relativePath))
-                            {
-                                layout.Content.Add(content);
-                            }
+                            processOneLayoutPath(path);
                         }
-
-                        if (layout.Content.Count() == 0)
+                        else
                         {
-                            Utilities.Log("No files were found in the folder containing \"" + layoutPath + "\". The layout.json will not be updated.");
+                            Utilities.alertBox("The file \"" + path + "\" is not named layout.json and will not be updated.");
                         }
-
-                        JsonSerializerOptions jsonOptions = new JsonSerializerOptions();
-                        jsonOptions.WriteIndented = true;
-                        jsonOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Create(UnicodeRanges.All);
-
-                        json = JsonSerializer.Serialize(layout, jsonOptions);
-
-                        try
-                        {
-                            File.WriteAllText(layoutPath, json.Replace("\r\n", "\n"));
-                        }
-                        catch (Exception ex)
-                        {
-                            Utilities.Log("Error: " + ex.Message);
-                        }
+                    }
+                    else if (Directory.Exists(path))
+                    {
+                        DirectoryInfo di = new DirectoryInfo(path);
+                        processDir(di);
                     }
                     else
                     {
-                        Utilities.Log("The file \"" + layoutPath + "\" is not named layout.json and will not be updated.");
+                        Utilities.alertBox("Path not found: " + path);
                     }
+                }
+    
+                if (processedFiles.Count > 1)
+                {
+                    string t = "Layout Files Processed:" + Environment.NewLine + Environment.NewLine;
+                    foreach (string path in processedFiles)
+                    {
+                        t = t + path + Environment.NewLine;
+                    }
+                    Utilities.infoBox(t);
+                }
+            }
+        }
+
+        static void processDir(DirectoryInfo dirInf)
+        {
+            FileInfo[] files = dirInf.GetFiles("*.json");
+            foreach (FileInfo fi in files)
+            {
+                if (string.Equals(fi.Name, "layout.json", StringComparison.OrdinalIgnoreCase))
+                {
+                    processOneLayoutPath(fi.FullName);
+                    return;
+                }
+            }
+
+            DirectoryInfo[] dirs = dirInf.GetDirectories();
+            foreach (DirectoryInfo di in dirs)
+            {
+                processDir(di);
+            }
+        }
+
+        static void processOneLayoutPath(string layoutPath)
+        {
+            Layout layout = new Layout();
+            string json;
+
+            try
+            {
+                cleanDirs(layoutPath);
+            }
+            catch (Exception ex)
+            {
+                Utilities.errorBox("Error: " + ex.Message);
+            }
+
+            foreach (string file in Directory.GetFiles(Path.GetDirectoryName(layoutPath), "*.*", SearchOption.AllDirectories))
+            {
+                string relativePath = Utilities.GetRelativePath(file, Path.GetDirectoryName(layoutPath));
+
+                Content content = new Content();
+                content.Path = relativePath;
+                content.Size = new FileInfo(file).Length;
+                content.Date = new FileInfo(file).LastWriteTimeUtc.ToFileTimeUtc();
+
+                if (isok(relativePath))
+                {
+                    layout.Content.Add(content);
+                }
+            }
+
+            if (layout.Content.Count() == 0)
+            {
+                Utilities.alertBox("No files were found in the folder containing \"" + layoutPath + "\". The layout.json will not be updated.");
+            }
+            else
+            {
+                JsonSerializerOptions jsonOptions = new JsonSerializerOptions();
+                jsonOptions.WriteIndented = true;
+                jsonOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.Create(UnicodeRanges.All);
+
+                json = JsonSerializer.Serialize(layout, jsonOptions);
+
+                try
+                {
+                    File.WriteAllText(layoutPath, json.Replace("\r\n", "\n"));
+                    processedFiles.Add(layoutPath);
+                }
+                catch (Exception ex)
+                {
+                    Utilities.errorBox("Error: " + ex.Message);
                 }
             }
         }
@@ -77,39 +130,15 @@ namespace MSFSLayoutGenerator
         {
             FileInfo fi = new FileInfo(layoutPath);
             DirectoryInfo di = fi.Directory;
+            string randFileName = Path.GetRandomFileName();
 
             foreach (DirectoryInfo tdi in di.GetDirectories())
             {
-                if (tdi.Name.ToLower() == "scenery")
+                if (tdi.Name.ToLower() == "scenery" || tdi.Name.ToLower() == "materiallibs")
                 {
-                    foreach (DirectoryInfo tdi2 in tdi.GetDirectories())
-                    {
-                        if (tdi2.Name.ToLower() == "global")
-                        {
-                            string dest = Path.Combine(tdi.FullName, di.Name + "_global");
-                            if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
-                            Directory.Move(tdi2.FullName, dest);
-                        }
-                        if (tdi2.Name.ToLower() == "world")
-                        {
-                            string dest = Path.Combine(tdi.FullName, di.Name + "_world");
-                            if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
-                            Directory.Move(tdi2.FullName, dest);
-                        }
-                    }
-                }
-
-                if (tdi.Name.ToLower() == "materiallibs")
-                {
-                    foreach (DirectoryInfo tdi2 in tdi.GetDirectories())
-                    {
-                        if (tdi2.Name.ToLower() == "mymaterials")
-                        {
-                            string dest = Path.Combine(tdi.FullName, di.Name);
-                            if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
-                            Directory.Move(tdi2.FullName, dest);
-                        }
-                    }
+                    string dest = tdi.FullName + "_" + randFileName;
+                    if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
+                    Directory.Move(tdi.FullName, dest);
                 }
             }
         }
@@ -137,5 +166,6 @@ namespace MSFSLayoutGenerator
             return true;
         }
 
+        static List<string> processedFiles = new List<string>();
     }
 }
