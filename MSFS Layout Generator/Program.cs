@@ -84,7 +84,7 @@ namespace MSFSLayoutGenerator
             }
             catch (Exception ex)
             {
-                Utilities.errorBox("Error: " + ex.Message);
+                Utilities.errorBox("cleanDirs() Error: " + ex.Message);
             }
 
             foreach (string file in Directory.GetFiles(Path.GetDirectoryName(layoutPath), "*.*", SearchOption.AllDirectories))
@@ -130,17 +130,61 @@ namespace MSFSLayoutGenerator
         {
             FileInfo fi = new FileInfo(layoutPath);
             DirectoryInfo di = fi.Directory;
-            string randFileName = Path.GetRandomFileName();
+            string randFileName = "[CR]" + Path.GetRandomFileName();
 
             foreach (DirectoryInfo tdi in di.GetDirectories())
             {
                 if (tdi.Name.ToLower() == "scenery" || tdi.Name.ToLower() == "materiallibs")
                 {
-                    string dest = tdi.FullName + "_" + randFileName;
-                    if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
-                    Directory.Move(tdi.FullName, dest);
+                    //List<FileInfo> filelist = new List<FileInfo>();
+                    FileInfo[] files = tdi.GetFiles();
+                    //foreach (FileInfo fi2 in files)
+                    //    filelist.Add(fi2);
+
+                    //List<DirectoryInfo> dirlist = new List<DirectoryInfo>();
+                    DirectoryInfo[] dirs = tdi.GetDirectories();
+                    //foreach (DirectoryInfo di2 in dirs)
+                    //    dirlist.Add(di2);
+
+                    string subdir = Path.Combine(tdi.FullName, randFileName);
+                    if (Directory.Exists(subdir)) throw new Exception("Directory already exists: " + subdir);
+
+                    //foreach (string path in filelist)
+                    //{
+
+                    //}
+
+                    //foreach (string path in dirlist)
+                    //{
+
+                    //}
+
+                    foreach (FileInfo fi2 in files)
+                    {
+                        createSubDir(subdir);
+                        string dest = Path.Combine(subdir, fi2.Name);
+                        if (File.Exists(dest)) throw new Exception("File already exists: " + dest);
+                        fi2.MoveTo(dest);
+                    }
+
+                    foreach (DirectoryInfo di2 in dirs)
+                    {
+                        if (!di2.Name.StartsWith("[CR]"))
+                        {
+                            createSubDir(subdir);
+                            string dest = Path.Combine(subdir, di2.Name);
+                            if (Directory.Exists(dest)) throw new Exception("Directory already exists: " + dest);
+                            di2.MoveTo(dest);
+                        }
+                    }
                 }
             }
+        }
+
+        static void createSubDir(string path)
+        {
+            if (!Directory.Exists(path))
+                Directory.CreateDirectory(path);
         }
 
         static bool isok(string relativePath)
