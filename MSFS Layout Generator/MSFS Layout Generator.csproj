@@ -116,4 +116,9 @@
     <Content Include="Icon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy /y "$(TargetPath)" "$(TargetDir)$(TargetName)_no_clean.exe"
+copy /y "$(TargetPath).config" "$(TargetDir)$(TargetName)_no_clean.exe.config"
+</PostBuildEvent>
+  </PropertyGroup>
 </Project>

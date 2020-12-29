@@ -4,41 +4,61 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Unicode;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Windows.Forms;
 
 namespace MSFSLayoutGenerator
 {
     class Program
     {
+        public const string NO_CLEAN = "NO_CLEAN";
+
+        private static bool no_clean = false;
+
         static void Main(string[] paths)
         {
-            if(paths.Count() == 0)
+            Assembly currentAssem = Assembly.GetExecutingAssembly();
+            if (currentAssem.Location.ToUpper().Contains(NO_CLEAN))
+                no_clean = true;
+
+            if (paths.Count() == 0)
             {
                 Utilities.alertBox("No paths specified." + Environment.NewLine + "Usage: MSFSLayoutGenerator.exe <layout.json>|<dir_path> ..." );
             }
             else
             {
+                //foreach (string path in paths)
+                //    if (path.ToUpper() == NO_CLEAN)
+                //    {
+                //        no_clean = true;
+                //        break;
+                //    }
+
                 foreach (string path in paths)
                 {
-                    if (File.Exists(path))
+                    if(path.ToUpper() != NO_CLEAN)
                     {
-                        FileInfo fi = new FileInfo(path);
-                        if (string.Equals(fi.Name, "layout.json", StringComparison.OrdinalIgnoreCase))
+                        if (File.Exists(path))
                         {
-                            processOneLayoutPath(path);
+                            FileInfo fi = new FileInfo(path);
+                            if (string.Equals(fi.Name, "layout.json", StringComparison.OrdinalIgnoreCase))
+                            {
+                                processOneLayoutPath(path);
+                            }
+                            else
+                            {
+                                Utilities.alertBox("The file \"" + path + "\" is not named layout.json and will not be updated.");
+                            }
+                        }
+                        else if (Directory.Exists(path))
+                        {
+                            DirectoryInfo di = new DirectoryInfo(path);
+                            processDir(di);
                         }
                         else
                         {
-                            Utilities.alertBox("The file \"" + path + "\" is not named layout.json and will not be updated.");
+                            Utilities.alertBox("Path not found: " + path);
                         }
-                    }
-                    else if (Directory.Exists(path))
-                    {
-                        DirectoryInfo di = new DirectoryInfo(path);
-                        processDir(di);
-                    }
-                    else
-                    {
-                        Utilities.alertBox("Path not found: " + path);
                     }
                 }
     
@@ -78,13 +98,16 @@ namespace MSFSLayoutGenerator
             Layout layout = new Layout();
             string json;
 
-            try
+            if (!no_clean)
             {
-                cleanDirs(layoutPath);
-            }
-            catch (Exception ex)
-            {
-                Utilities.errorBox("cleanDirs() Error: " + ex.Message);
+                try
+                {
+                    cleanDirs(layoutPath);
+                }
+                catch (Exception ex)
+                {
+                    Utilities.errorBox("cleanDirs() Error: " + ex.Message);
+                }
             }
 
             foreach (string file in Directory.GetFiles(Path.GetDirectoryName(layoutPath), "*.*", SearchOption.AllDirectories))
@@ -128,9 +151,11 @@ namespace MSFSLayoutGenerator
 
         static void cleanDirs(string layoutPath)
         {
+            const string NO_CONFLICT = "NOCONFLICT";
+
             FileInfo fi = new FileInfo(layoutPath);
             DirectoryInfo di = fi.Directory;
-            string randFileName = "[CR]" + Path.GetRandomFileName();
+            string randFileName = NO_CONFLICT + Path.GetRandomFileName();
 
             foreach (DirectoryInfo tdi in di.GetDirectories())
             {
@@ -169,7 +194,7 @@ namespace MSFSLayoutGenerator
 
                     foreach (DirectoryInfo di2 in dirs)
                     {
-                        if (!di2.Name.StartsWith("[CR]"))
+                        if (!di2.Name.StartsWith(NO_CONFLICT))
                         {
                             createSubDir(subdir);
                             string dest = Path.Combine(subdir, di2.Name);
@@ -204,7 +229,16 @@ namespace MSFSLayoutGenerator
             if (string.Equals(relativePath, "holdingdata.xml"))
                 return false;
 
-            if (string.Equals(relativePath.ToLower(), "readme.md"))
+            //if (string.Equals(relativePath.ToLower(), "readme.md"))
+            //    return false;
+
+            //if (string.Equals(relativePath.ToLower(), "readme.txt"))
+            //    return false;
+
+            if (relativePath.ToLower().Contains("readme"))
+                return false;
+
+            if (relativePath.ToLower().Contains("credits.txt"))
                 return false;
 
             return true;
